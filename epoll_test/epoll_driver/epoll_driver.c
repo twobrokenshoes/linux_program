@@ -83,6 +83,17 @@ static int epoll_list_del(void)
 	return ret;
 }
 
+static void destroy_link_list(void)
+{
+	struct link_list *temp = NULL;
+	while(header){
+		temp = header;
+		header = header-> next;
+		kfree(temp);
+	}
+	header = tail = NULL;
+}
+
 static int epoll_open(struct inode *inode, struct file *file)
 {
 	printk("[EPOLL]open successful\n");
@@ -185,6 +196,7 @@ static int workqueue_init(void)
 
 static void workqueue_exit(void)
 {
+	cancel_delayed_work_sync(&test_work);
 	destroy_workqueue(queue);
 //	printk("my_net_link: self module exited\n");
 }
@@ -219,13 +231,14 @@ static int __init epoll_test_init(void)
 	}
 	init_waitqueue_head(&epoll_test_wait);
 	
-	queue_delayed_work(queue,&test_work,msecs_to_jiffies(5000));
+	queue_delayed_work(queue,&test_work,msecs_to_jiffies(500));
 	return 0;
 }
 
 static void __exit epoll_test_exit(void)
 {
 	workqueue_exit();
+	destroy_link_list();
 	cdev_del(&epoll_cdev);
 	device_destroy(epoll_test_class, epoll_test_devt);
 	class_destroy(epoll_test_class);
